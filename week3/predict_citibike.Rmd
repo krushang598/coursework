@@ -1,6 +1,8 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 #Setup
@@ -143,14 +145,12 @@ trips_per_day_test <- trips_per_day_test %>%
 
 plot_data <- bind_rows(trips_per_day_train, trips_per_day_validate, trips_per_day_test)
 
-ggplotly(ggplot(plot_data, aes(x = ymd, y = num_trips)) +
+ggplotly(ggplot(plot_data, aes(x = pred, y = num_trips)) +
   geom_point(aes(color = split)) +
   geom_line(aes(y = pred)) +
-  xlab('Day of the year') +
-  ylab('Daily trips') +
+  xlab('Predicted number of daily trips') +
+  ylab('Actual number of daily trips') +
   scale_y_continuous())
-
-plot_data <- bind_rows(trips_per_day_train, trips_per_day_validate, trips_per_day_test) %>% filter(ymd!="2014-4-30")
 
 ggplotly(ggplot(plot_data, aes(x = ymd, y = num_trips)) +
   geom_point(aes(color = split)) +
