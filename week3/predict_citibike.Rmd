@@ -1,0 +1,165 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+#Setup
+
+First we'll load some packages, including the recent modelr for easy modeling, setting options to warn us whenever observations with missing values are ignored by our models.
+
+```{r}
+library(tidyverse)
+library(scales)
+library(modelr)
+library(lubridate)
+library(plotly)
+
+theme_set(theme_bw())
+options(repr.plot.width=4, repr.plot.height=3)
+```
+
+Then we'll load a data frame of the number of total trips taken by Citibike riders for each day in 2014, along with the weather on each day.
+
+```{r}
+trips_per_day <- read_tsv('trips_per_day.tsv')
+holidays <- read_csv("holidays.csv", col_names = c('sr','ymd','name')) %>% select(ymd) %>% mutate(holiday=1)
+#sun <- read_csv("sun.csv") %>% as.Date(ymd, format = "%m/%d/%Y")
+
+trips_per_day <- left_join(trips_per_day, holidays, by="ymd") %>% mutate(holiday = ifelse(is.na(holiday), 0, 1))
+
+trips_per_day <- trips_per_day %>% mutate(weekdays=as.factor(weekdays(ymd))) %>% mutate(isWeekend = ifelse(weekdays=="Saturday"|weekdays=="Sunday", 1, 0))
+
+#trips_per_day <- left_join(trips_per_day, sun, by="ymd")
+
+head(trips_per_day)
+```
+
+Let's plot the number of trips taken as a function of the minimum temperature on each day.
+
+```{r}
+ggplot(trips_per_day, aes(x = tmin, y = num_trips)) +
+  geom_point() +
+  xlab('Minimum temperature') +
+  ylab('Daily trips') +
+  scale_y_continuous()
+```
+
+#Cross-validation
+
+Now we'll try fitting different polynomials to this data, and use cross-validation to find the polynomial degree that generalizes best to held out data.
+
+First we'll shuffle the data and make an 80% train and 20% validation split.
+
+```{r}
+#RNGkind(sample.kind = "Rounding")
+set.seed(42)
+
+num_days <- nrow(trips_per_day)
+frac_train <- 0.8
+frac_val <- 0.1
+frac_test <- 0.1
+num_train <- floor(num_days * frac_train)
+num_val <- floor(num_days * frac_val)
+num_test <- num_days - num_train - num_val
+
+# randomly sample rows for the training set 
+ndx <- sample(1:num_days, num_train, replace=F)
+ndv <- sample(1:num_days, num_val, replace = F)
+ndt <- sample(1:num_days, num_test, replace =F)
+
+
+# used to fit the model
+trips_per_day_train <- trips_per_day[ndx, ]
+
+# used to evaluate the fit
+trips_per_day_validate <- trips_per_day[ndv, ]
+
+# used to test the fit
+trips_per_day_test <- trips_per_day[ndt, ]
+```
+
+Now we'll evaluate models from degree 1 up through degree 8. For each we'll fit on the training data and evaluate on the validation data.
+
+```{r}
+# fit a model for each polynomial degree
+K <- 1:8
+train_err <- c()
+validate_err <- c()
+test_err <- c()
+for (k in K) {
+  
+    # fit on the training data
+    model <- lm(num_trips ~ poly(tmin, k, raw = T) + holiday + snwd * isWeekend + prcp * isWeekend + snow * isWeekend + poly(tmax, k, raw = T) + weekdays, data=trips_per_day_train)
+    
+    # evaluate on the training data
+    train_err[k] <- sqrt(mean((predict(model, trips_per_day_train) - trips_per_day_train$num_trips)^2))
+
+    # evaluate on the validate data
+    validate_err[k] <- sqrt(mean((predict(model, trips_per_day_validate) - trips_per_day_validate$num_trips)^2))
+    
+    #test_err[k] <- sqrt(mean((predict(model, trips_per_day_test) - trips_per_day_test$num_trips)^2))
+}
+summary(model)
+```
+
+Now we'll plot the training and validation error as a function of the polynomial degree.
+
+```{r}
+plot_data <- data.frame(K, train_err, validate_err) %>%
+  gather("split", "error", -K)
+
+ggplotly(ggplot(plot_data, aes(x=K, y=error, color=split)) +
+  geom_line() +
+  scale_x_continuous(breaks=K) +
+  xlab('Polynomial Degree') +
+  ylab('RMSE'))
+```
+
+Although the training error decreases as we increase the degree, the test error bottoms out at for a fifth degree polynomial.
+
+Let's re-fit this model on all of the data and plot the final result.
+
+```{r}
+model <- lm(num_trips ~ poly(tmin, 6, raw = T) + holiday + snwd * isWeekend + prcp * isWeekend + snow * isWeekend + poly(tmax, 6, raw = T) + weekdays, data=trips_per_day_train)
+
+rmse(model,trips_per_day_train)
+rsquare(model,trips_per_day_train)
+
+rmse(model,trips_per_day_validate)
+rsquare(model,trips_per_day_validate)
+
+rmse(model,trips_per_day_test)
+rsquare(model,trips_per_day_test)
+
+trips_per_day_train <- trips_per_day_train %>%
+  add_predictions(model) %>%
+  mutate(split = "train")
+trips_per_day_validate <- trips_per_day_validate %>%
+  add_predictions(model) %>%
+  mutate(split = "validate")
+trips_per_day_test <- trips_per_day_test %>%
+  add_predictions(model) %>%
+  mutate(split = "test")
+
+plot_data <- bind_rows(trips_per_day_train, trips_per_day_validate, trips_per_day_test)
+
+ggplotly(ggplot(plot_data, aes(x = ymd, y = num_trips)) +
+  geom_point(aes(color = split)) +
+  geom_line(aes(y = pred)) +
+  xlab('Day of the year') +
+  ylab('Daily trips') +
+  scale_y_continuous())
+
+plot_data <- bind_rows(trips_per_day_train, trips_per_day_validate, trips_per_day_test) %>% filter(ymd!="2014-4-30")
+
+ggplotly(ggplot(plot_data, aes(x = ymd, y = num_trips)) +
+  geom_point(aes(color = split)) +
+  geom_line(aes(y = pred)) +
+  xlab('Day of the year') +
+  ylab('Daily trips') +
+  scale_y_continuous())
+```
+
+We're done at this point, with one important exception.
+
+If we'd like to quote how well we expect this model to do on future data, we should use a final, held out test set that we touch only once to make this assessment. (Reusing the validation set would give an optimistic estimate, as our modeling process has already seen that data in the cross-validation process.)
