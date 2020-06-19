@@ -5,7 +5,7 @@ output:
     df_print: paged
 ---
 
-#Setup
+# Setup
 
 First we'll load some packages, including the recent modelr for easy modeling, setting options to warn us whenever observations with missing values are ignored by our models.
 
@@ -23,6 +23,7 @@ options(repr.plot.width=4, repr.plot.height=3)
 Then we'll load a data frame of the number of total trips taken by Citibike riders for each day in 2014, along with the weather on each day.
 
 ```{r}
+
 trips_per_day <- read_tsv('trips_per_day.tsv')
 holidays <- read_csv("holidays.csv", col_names = c('sr','ymd','name')) %>% select(ymd) %>% mutate(holiday=1)
 #sun <- read_csv("sun.csv") %>% as.Date(ymd, format = "%m/%d/%Y")
@@ -30,6 +31,11 @@ holidays <- read_csv("holidays.csv", col_names = c('sr','ymd','name')) %>% selec
 trips_per_day <- left_join(trips_per_day, holidays, by="ymd") %>% mutate(holiday = ifelse(is.na(holiday), 0, 1))
 
 trips_per_day <- trips_per_day %>% mutate(weekdays=as.factor(weekdays(ymd))) %>% mutate(isWeekend = ifelse(weekdays=="Saturday"|weekdays=="Sunday", 1, 0))
+
+trips_by_day_2015 <- left_join(trips_by_day_2015, holidays, by="ymd") %>% mutate(holiday = ifelse(is.na(holiday), 0, 1))
+
+trips_by_day_2015 <- trips_by_day_2015 %>% mutate(weekdays=as.factor(weekdays(ymd))) %>% mutate(isWeekend = ifelse(weekdays=="Saturday"|weekdays=="Sunday", 1, 0))
+
 
 #trips_per_day <- left_join(trips_per_day, sun, by="ymd")
 
@@ -106,7 +112,7 @@ summary(model)
 
 Now we'll plot the training and validation error as a function of the polynomial degree.
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 plot_data <- data.frame(K, train_err, validate_err) %>%
   gather("split", "error", -K)
 
@@ -121,7 +127,7 @@ Although the training error decreases as we increase the degree, the test error 
 
 Let's re-fit this model on all of the data and plot the final result.
 
-```{r}
+```{r warning=F}
 model <- lm(num_trips ~ poly(tmin, 6, raw = T) + holiday + snwd * isWeekend + prcp * isWeekend + snow * isWeekend + poly(tmax, 6, raw = T) + weekdays, data=trips_per_day_train)
 
 rmse(model,trips_per_day_train)
@@ -143,7 +149,26 @@ trips_per_day_test <- trips_per_day_test %>%
   add_predictions(model) %>%
   mutate(split = "test")
 
-plot_data <- bind_rows(trips_per_day_train, trips_per_day_validate, trips_per_day_test)
+model <- lm(num_trips ~ poly(tmin, 6, raw = T) + holiday + snwd * isWeekend + prcp * isWeekend + snow * isWeekend + poly(tmax, 6, raw = T) + weekdays, data=trips_per_day)
+
+trips_per_crop <- trips_by_day_2015 #%>% filter(ymd >= "2015-08-01")
+
+trips_per_crop <- trips_per_crop %>%
+  add_predictions(model) %>%
+  mutate(split = "trips")
+
+rmse(model,trips_per_crop)
+rsquare(model,trips_per_crop)
+
+trips_by_day_2015 <- trips_by_day_2015 %>%
+  add_predictions(model) %>%
+  mutate(split = "trips")
+
+rmse(model,trips_by_day_2015)
+rsquare(model,trips_by_day_2015)
+
+#plot_data <- bind_rows(trips_per_day_train, trips_per_day_validate, trips_per_day_test)
+plot_data <- trips_per_crop
 
 ggplotly(ggplot(plot_data, aes(x = pred, y = num_trips)) +
   geom_point(aes(color = split)) +

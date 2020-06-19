@@ -1,0 +1,98 @@
+---
+title: "Predicting Citibike daily number of trips in 2015 - Open ended"
+output:
+  html_document:
+    df_print: paged
+---
+Krushang Shah
+06/18/2020
+
+## Setup
+```{r setup, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(scales)
+library(modelr)
+library(lubridate)
+library(plotly)
+library(broom)
+
+theme_set(theme_bw())
+options(repr.plot.width=4, repr.plot.height=3)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load Data
+```{r message=FALSE, warning=FALSE}
+load('.RData')
+load('trips_2015.RData')
+```
+
+## Modify 2015 data to feed into the model
+```{r message=FALSE, warning=FALSE}
+# Adding holiday list
+trips_per_day_2015 <- left_join(trips_per_day_2015, holidays, by="ymd") %>% mutate(holiday = ifelse(is.na(holiday), 0, 1))
+
+# Adding weekdays and weekends
+trips_per_day_2015 <- trips_per_day_2015 %>% mutate(weekdays=as.factor(weekdays(ymd))) %>% mutate(isWeekend = ifelse(weekdays=="Saturday"|weekdays=="Sunday", 1, 0))
+```
+
+## Model description
+```{r}
+tidy(model)
+```
+
+## Test on 2015 data
+```{r message=FALSE, warning=FALSE}
+rmse(model,trips_per_day_2015)
+rsquare(model,trips_per_day_2015)
+
+trips_per_day_2015 <- trips_per_day_2015 %>%
+  add_predictions(model) %>%
+  mutate(split = "2015")
+
+plot_data <- trips_per_day_2015
+
+ggplotly(ggplot(plot_data, aes(x = pred, y = num_trips)) +
+  geom_point(aes(color = split)) +
+  geom_line(aes(y = pred)) +
+  xlab('Predicted number of daily trips') +
+  ylab('Actual number of daily trips') +
+  scale_y_continuous())
+
+ggplotly(ggplot(plot_data, aes(x = ymd, y = num_trips)) +
+  geom_point(aes(color = split)) +
+  geom_line(aes(y = pred)) +
+  xlab('Day of the year') +
+  ylab('Daily trips') +
+  scale_y_continuous())
+```
+
+## Comparision between 2014 and 2015
+```{r message=FALSE, warning=FALSE}
+
+rmse(model,trips_per_day)
+rsquare(model,trips_per_day)
+
+rmse(model,trips_per_day_2015)
+rsquare(model,trips_per_day_2015)
+
+trips_per_day <- trips_per_day %>%
+  add_predictions(model) %>%
+  mutate(split = "2014")
+
+plot_data <- bind_rows(trips_per_day, trips_per_day_2015)
+
+ggplotly(ggplot(plot_data, aes(x = pred, y = num_trips)) +
+  geom_point(aes(color = split)) +
+  geom_line(aes(y = pred)) +
+  xlab('Predicted number of daily trips') +
+  ylab('Actual number of daily trips') +
+  scale_y_continuous())
+
+ggplotly(ggplot(plot_data, aes(x = ymd, y = num_trips)) +
+  geom_point(aes(color = split)) +
+  geom_line(aes(y = pred)) +
+  xlab('Day of the year') +
+  ylab('Daily trips') +
+  scale_y_continuous())
+```
