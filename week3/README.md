@@ -12,11 +12,8 @@ This week covers several assignments on reproducing the results of published res
 
 ## N-gram data and "Culturonomics"
 
-<<<<<<< HEAD
 * Replicate and extend the results of the [Google n-grams "culturomics" paper](https://science.sciencemag.org/content/331/6014/176) using the template [here](ngrams/) 
 * The Report for it can be found here [05_final_report.html](https://rawcdn.githack.com/krushang598/coursework/610ff01d366c280b676db5e57bf37081d7431b55/week3/ngrams/05_final_report.html) and [05_final_report.pdf](https://github.com/krushang598/coursework/blob/master/week3/ngrams/05_final_report.pdf)
-=======
-* Replicate and extend the results of the [Google n-grams "culturomics" paper](https://science.sciencemag.org/content/331/6014/176) using the template [here](ngrams/)
 * Consider the last bit of this exercise on creating a Makefile "extra credit", here are some references for using GNU Make / Makefiles:
   * [Why Use Make?](https://bost.ocks.org/mike/make/) by Mike Bostock
   * [GNU Make for Reproducible Data Analysis](http://zmjones.com/make/) by Zach Jones
@@ -37,22 +34,6 @@ The point of this exercise is to get experience in an open-ended prediction exer
 8. Commit all of your changes to git, using ``git add -f`` to add the model ``.Rdata`` file if needed, and push to your Github repository.
 9. Finally, use the model you just developed and pushed to Github to make predictions on the 10% of data you kept aside as a test set. Do this only once, and record the performance in your Rmarkdown file. Use this number to make a guess as to how your model will perform on future data (which we'll test it on!). Do you think it will do better, worse, or the same as it did on the 10% test set you used here? Write your answer in your Rmarkdown notebook. Render the notebook and push the final result to Github.
 
-<<<<<<< HEAD
-<!--
-8. Write a new file that loads in the [weather data for new days](weather_2015.csv) and your saved model, and predicts the number of trips for each day (see [load_trips.R](../week1/load_trips.R) for code snippets to load in the weather data).
-9. Modify the [download_trips.sh](../week1/download_trips.sh) script to download trips from 2015 (instead of 2014). 
-10. Compute the RMSE between the actual and predicted trips for 2015 and compare the results to what you found with cross-validation.
-11. Pair up with a partner who has a different model, run their model, and evaluate the predictions it makes for the 2015 data.
--->
->>>>>>> c624e46227eb62abf1e5106d7a9e9917dc0d4f01
-||||||| c624e46
-<!--
-8. Write a new file that loads in the [weather data for new days](weather_2015.csv) and your saved model, and predicts the number of trips for each day (see [load_trips.R](../week1/load_trips.R) for code snippets to load in the weather data).
-9. Modify the [download_trips.sh](../week1/download_trips.sh) script to download trips from 2015 (instead of 2014). 
-10. Compute the RMSE between the actual and predicted trips for 2015 and compare the results to what you found with cross-validation.
-11. Pair up with a partner who has a different model, run their model, and evaluate the predictions it makes for the 2015 data.
--->
-=======
 # Day 4
 
 ## Testing your Citibike models
@@ -72,4 +53,3 @@ These two exercises take a look at two questions and how they might be answered 
 
 * [Investigating link between coffee and cancer](https://github.com/jhofman/msd2019/tree/master/homework/homework_2/problem_1)
 * [Is yawning contagious?](https://github.com/jhofman/msd2019/tree/master/homework/homework_2/problem_2)
->>>>>>> 15678aa50df48748b7c69d2ebf10dd32c20396e5
